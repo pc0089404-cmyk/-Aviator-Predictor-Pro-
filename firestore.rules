@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.matches('^[0-9a-zA-Z_\\-]+$') && id.size() > 0 && id.size() <= 64;
+    }
+
+    // Users collection: All subscription activations and modifications are strictly handled via backend API
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow write: if false; // Only backend service can write
+    }
+
+    // Transactions collection: strictly backend-authoritative
+    match /transactions/{reference} {
+      allow read: if isValidId(reference);
+      allow write: if false; // Only backend service can write
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

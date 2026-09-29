@@ -1,0 +1,6 @@
+{
+  "name": "Aviator Predator Pro",
+  "description": "Premium mobile-first Aviator analysis and signal estimation suite featuring daily SportyBet verification, real-time signal generation, weekly analysis trends, and device customization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

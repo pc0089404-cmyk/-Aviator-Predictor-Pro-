@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Subscription Account",
+      "description": "Stores user access ID, subscription duration, and status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Numeric User ID" },
+        "status": { "type": "string", "enum": ["active", "expired", "pending"] },
+        "purchaseDate": { "type": "string" },
+        "activationDate": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "paymentReference": { "type": "string" },
+        "paymentAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "status", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Payment Transaction Record",
+      "description": "Records verified Paystack transaction events",
+      "type": "object",
+      "properties": {
+        "reference": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "paystackId": { "type": "string" },
+        "type": { "type": "string", "enum": ["purchase", "renewal"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["reference", "userId", "amount", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "entity": "User",
+      "description": "User subscriptions indexed by unique numeric User ID"
+    },
+    "/transactions/{reference}": {
+      "entity": "Transaction",
+      "description": "Verified transaction records indexed by Paystack reference"
+    }
+  }
+}
