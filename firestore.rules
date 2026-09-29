@@ -2,23 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper: Valid document ID (numbers, alphanumeric, dashes, underscores up to 64 chars)
     function isValidId(id) {
       return id is string && id.matches('^[0-9a-zA-Z_\\-]+$') && id.size() > 0 && id.size() <= 64;
     }
 
-    // Users collection: All subscription activations and modifications are strictly handled via backend API
+    // Helper: Valid user document shape
+    function isValidUser(data) {
+      return data.userId is string &&
+             data.userId.size() > 0 &&
+             data.userId.size() <= 32 &&
+             data.status in ['active', 'expired', 'pending'] &&
+             data.createdAt is string;
+    }
+
+    // Helper: Valid transaction record shape
+    function isValidTransaction(data) {
+      return data.reference is string &&
+             data.reference.size() > 0 &&
+             data.reference.size() <= 64 &&
+             data.userId is string &&
+             data.amount is number &&
+             data.status is string;
+    }
+
+    // Users collection
     match /users/{userId} {
       allow read: if isValidId(userId);
-      allow write: if false; // Only backend service can write
+      allow write: if isValidId(userId) && isValidUser(request.resource.data);
     }
 
-    // Transactions collection: strictly backend-authoritative
+    // Transactions collection
     match /transactions/{reference} {
       allow read: if isValidId(reference);
-      allow write: if false; // Only backend service can write
+      allow write: if isValidId(reference) && isValidTransaction(request.resource.data);
     }
 
+    // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
     }

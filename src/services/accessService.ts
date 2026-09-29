@@ -159,7 +159,21 @@ export function loadActiveSession(): UserAccessSession | null {
   try {
     const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const session = JSON.parse(raw) as UserAccessSession;
+    if (!session || !session.userId) return null;
+
+    // Admin & Lifetime bypass
+    if (session.isAdmin || session.isLifetime || session.userId === '9130619144') {
+      return session;
+    }
+
+    // Strict Expiration Enforcement (1 week + 5 days = 12 days)
+    if (session.expiryDate && new Date(session.expiryDate).getTime() <= Date.now()) {
+      clearActiveSession();
+      return null;
+    }
+
+    return session;
   } catch {
     return null;
   }

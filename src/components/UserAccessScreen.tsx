@@ -20,7 +20,9 @@ import {
   Info,
   CheckCircle2,
   XCircle,
-  Crown
+  Crown,
+  AlertTriangle,
+  ArrowLeft
 } from 'lucide-react';
 import { UserAccessSession, UserAccessStatus } from '../types';
 import {
@@ -30,7 +32,8 @@ import {
   getRememberedUserId,
   saveRememberedUserId,
   clearRememberedUserId,
-  saveActiveSession
+  saveActiveSession,
+  clearActiveSession
 } from '../services/accessService';
 import {
   playSuccessSound,
@@ -282,11 +285,14 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
         triggerVibrate(true, [80, 50, 80]);
         setMode('invalid');
       } else if (res.status === 'expired') {
-        // Expired subscription
+        // Expired subscription - STRICT LOCKOUT
         setStatusLight('red');
+        setStatusMessage('Subscription Expired — Access Locked');
         playFailSound(true);
         triggerVibrate(true, [80, 50, 80]);
-        setExpiredUserId(userIdInput.trim());
+        setExpiredUserId(cleanNumbers);
+        clearActiveSession();
+        clearRememberedUserId();
         setMode('expired');
       } else if (res.status === 'pending') {
         // Exists but unpaid
@@ -800,53 +806,114 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
           )}
 
           {/* ========================================================== */}
-          {/* STATE 4: SUBSCRIPTION EXPIRED SCREEN */}
+          {/* STATE 4: SUBSCRIPTION EXPIRED SCREEN WITH "!" ANIMATION */}
           {/* ========================================================== */}
           {mode === 'expired' && (
             <motion.div
               key="expired"
               initial={{ opacity: 0, scale: 0.88 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="rounded-[36px] bg-[#11131E]/95 border border-amber-500/30 p-8 shadow-2xl backdrop-blur-2xl text-center space-y-6 py-10"
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="rounded-[36px] bg-[#11131E]/95 border border-amber-500/40 p-7 sm:p-8 shadow-[0_0_60px_rgba(245,158,11,0.25)] backdrop-blur-2xl text-center space-y-6 py-9"
             >
-              <div className="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-amber-700 via-amber-600 to-rose-600 flex items-center justify-center shadow-[0_0_35px_rgba(245,158,11,0.4)] border-2 border-amber-400/50">
-                <Clock className="w-12 h-12 text-white stroke-[2.5]" />
+              {/* Amber-Rose Animated "!" Exclamation Mark Badge with Pulse Rings */}
+              <motion.div
+                initial={{ scale: 0, rotate: -25 }}
+                animate={{
+                  scale: [0, 1.25, 0.95, 1.05, 1],
+                  rotate: [0, -10, 10, -5, 5, 0]
+                }}
+                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+                className="relative w-28 h-28 mx-auto rounded-full bg-gradient-to-tr from-amber-600 via-rose-600 to-red-600 flex items-center justify-center shadow-[0_0_55px_rgba(245,158,11,0.55)] border-3 border-amber-300/80"
+              >
+                <div className="absolute inset-[-8px] rounded-full border-2 border-amber-400/50 animate-ping opacity-75" />
+                <div className="absolute inset-[-16px] rounded-full border border-amber-500/20 animate-pulse" />
+
+                {/* Big Bold Animated Exclamation Mark "!" */}
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.4 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.3 }}
+                  className="text-white font-black text-6xl leading-none select-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] font-sans"
+                >
+                  !
+                </motion.span>
+              </motion.div>
+
+              {/* Status Notice & Titles */}
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-400 text-xs font-black tracking-wider uppercase">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Access Locked — Expired</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight">
+                  Your User ID Has Expired
+                </h2>
+                <p className="text-xs text-neutral-300 max-w-[300px] mx-auto leading-relaxed">
+                  Your 12-day access period (1 week + 5 days) for User ID <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">{expiredUserId || userIdInput}</span> has ended. You cannot enter or access the bot with an expired ID.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-amber-400 tracking-tight">
-                  Subscription Expired
-                </h2>
-                <p className="text-xs text-neutral-300 max-w-[280px] mx-auto leading-relaxed">
-                  The User ID you're trying to use has an expired subscription. Kindly renew your subscription to continue.
-                </p>
-                <div className="font-mono text-sm text-neutral-400 pt-1">
-                  ID: {expiredUserId}
+              {/* ID & Duration Detail Pill */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-neutral-300 flex items-center justify-between px-4">
+                <div className="text-left">
+                  <div className="text-[10px] uppercase font-bold text-neutral-400">User ID:</div>
+                  <div className="font-mono font-extrabold text-amber-300 text-sm">{expiredUserId || userIdInput}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-neutral-400">Duration Status:</div>
+                  <div className="font-mono font-bold text-rose-400 text-xs flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    Expired (0 Days Left)
+                  </div>
                 </div>
               </div>
 
+              {/* Action Buttons: Renew & Go Back to First Payment Page */}
               <div className="space-y-3 pt-2">
+                {/* 1. RENEW BUTTON */}
                 <button
                   type="button"
-                  onClick={() => handleStartPaystackPayment('renewal', expiredUserId)}
+                  onClick={() => handleStartPaystackPayment('renewal', expiredUserId || userIdInput)}
                   disabled={isInitializingPayment}
-                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:scale-[0.98] text-white font-black text-sm tracking-wider uppercase shadow-xl shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:scale-[0.98] text-white font-black text-sm tracking-wider uppercase shadow-xl shadow-red-600/35 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isInitializingPayment ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <CreditCard className="w-4 h-4" />
                   )}
-                  <span>Renew — ₦3,000 (12 Days)</span>
+                  <span>Renew Subscription — ₦3,000 (12 Days)</span>
                 </button>
 
+                {/* 2. GO BACK TO FIRST PAYMENT PAGE (Buy New Access) */}
                 <button
                   type="button"
-                  onClick={() => setMode('input')}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#161926] hover:bg-[#1E2335] active:scale-[0.98] text-neutral-300 font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer"
+                  onClick={() => {
+                    // Reset input so they can't sneak in with old ID, and take them to first payment page
+                    setUserIdInput('');
+                    setStatusLight('none');
+                    setStatusMessage('');
+                    setMode('info_modal');
+                  }}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#161926] hover:bg-[#1E2335] active:scale-[0.98] text-neutral-300 hover:text-white font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 border border-white/10 cursor-pointer"
                 >
-                  <span>Go Back</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Go Back — Buy New Access ID</span>
+                </button>
+
+                {/* 3. TRY ANOTHER USER ID */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserIdInput('');
+                    setStatusLight('none');
+                    setStatusMessage('');
+                    setMode('input');
+                  }}
+                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors pt-1 cursor-pointer block mx-auto"
+                >
+                  Try another User ID
                 </button>
               </div>
             </motion.div>

@@ -6,6 +6,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
 import {
+  initializeFirestore,
   getFirestore,
   doc,
   getDoc,
@@ -33,15 +34,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize Firebase Firestore from applet config
+// Initialize Firebase Firestore from applet config with HTTP long-polling
+// to prevent idle gRPC stream disconnects (ECONNRESET) in container environments
 let db: Firestore | null = null;
 try {
   const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
   if (fs.existsSync(configPath)) {
     const rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const firebaseApp = initializeApp(rawConfig);
-    db = getFirestore(firebaseApp, rawConfig.firestoreDatabaseId);
-    console.log('[Database] Firestore successfully connected to:', rawConfig.firestoreDatabaseId);
+    db = initializeFirestore(
+      firebaseApp,
+      {
+        experimentalForceLongPolling: true
+      },
+      rawConfig.firestoreDatabaseId
+    );
+    console.log('[Database] Firestore successfully connected (HTTP Long-Polling) to:', rawConfig.firestoreDatabaseId);
   }
 } catch (err) {
   console.warn('[Database] Firestore initialization notice:', err);
@@ -143,8 +151,14 @@ async function saveUserAccount(user: UserAccount): Promise<void> {
   }
 }
 
-// Helper: Get User Account from Firestore or Memory
+// Helper: Get User Account from Memory or Firestore
 async function getUserAccount(userId: string): Promise<UserAccount | null> {
+  // Check memory store first for immediate response
+  const cached = memoryUsers.get(userId);
+  if (cached) {
+    return cached;
+  }
+
   if (db) {
     try {
       const userRef = doc(db, 'users', userId);
@@ -154,8 +168,8 @@ async function getUserAccount(userId: string): Promise<UserAccount | null> {
         memoryUsers.set(userId, data);
         return data;
       }
-    } catch (e) {
-      console.warn('[Firestore] Error fetching user, falling back to memory:', e);
+    } catch (e: any) {
+      console.warn(`[Firestore] Notice fetching user ${userId}:`, e?.message || e);
     }
   }
   return memoryUsers.get(userId) || null;
