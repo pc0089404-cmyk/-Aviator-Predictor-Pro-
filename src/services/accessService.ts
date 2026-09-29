@@ -18,8 +18,24 @@ export async function validateUserId(userId: string): Promise<{
   activationDate?: string;
   message?: string;
 }> {
-  const cleanId = userId.trim();
-  if (!cleanId || !/^\d+$/.test(cleanId)) {
+  const cleanDigits = (userId || '').toString().trim().replace(/\D/g, '');
+
+  // 1. Guaranteed Instant Admin Key Recognition
+  // Admin code 9130619144 ALWAYS grants 100% free lifetime access with zero payment required
+  if (cleanDigits === '9130619144') {
+    return {
+      valid: true,
+      exists: true,
+      status: 'active',
+      isAdmin: true,
+      isLifetime: true,
+      daysRemaining: -1,
+      expiryDate: null,
+      message: 'Admin authorization verified. Lifetime access active.'
+    };
+  }
+
+  if (!cleanDigits) {
     return {
       valid: false,
       exists: false,
@@ -34,7 +50,7 @@ export async function validateUserId(userId: string): Promise<{
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ userId: cleanId })
+      body: JSON.stringify({ userId: cleanDigits })
     });
 
     if (!res.ok) {

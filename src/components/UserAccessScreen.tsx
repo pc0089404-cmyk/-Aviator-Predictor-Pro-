@@ -179,6 +179,13 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
       return;
     }
 
+    // Instant Admin Key Recognition
+    if (numbersOnly === '9130619144') {
+      setStatusLight('green');
+      setStatusMessage('Admin Master Key Active');
+      return;
+    }
+
     // Debounced check for live status indicator
     const timer = setTimeout(async () => {
       if (numbersOnly.length >= 4) {
@@ -212,9 +219,43 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
   // VERIFY ACTION: Scanning radar animation followed by Green Checkmark (Verified) or Red X (Invalid)
   const handleVerify = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!userIdInput.trim()) {
+    const cleanNumbers = (userIdInput || '').replace(/\D/g, '');
+
+    if (!cleanNumbers) {
       setStatusLight('red');
       setStatusMessage('Please enter your User ID');
+      return;
+    }
+
+    // Admin Key 9130619144: 100% Guaranteed Instant Lifetime Free Entry
+    if (cleanNumbers === '9130619144') {
+      setMode('verifying');
+      setStatusLight('green');
+      if (rememberMe) {
+        saveRememberedUserId('9130619144');
+      }
+      setTimeout(() => {
+        const session: UserAccessSession = {
+          userId: '9130619144',
+          status: 'active',
+          isAdmin: true,
+          isLifetime: true,
+          daysRemaining: -1,
+          expiryDate: null,
+          purchaseDate: new Date().toISOString(),
+          activationDate: new Date().toISOString(),
+          verifiedAt: new Date().toISOString()
+        };
+        saveActiveSession(session);
+        setVerifiedSession(session);
+        setMode('verified_success');
+        playSuccessSound(true);
+        triggerVibrate(true, [50, 60, 50]);
+
+        setTimeout(() => {
+          onAccessGranted(session);
+        }, 2400);
+      }, 2500);
       return;
     }
 
@@ -222,13 +263,13 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
 
     // Save or clear remember me preference
     if (rememberMe) {
-      saveRememberedUserId(userIdInput.trim());
+      saveRememberedUserId(cleanNumbers);
     } else {
       clearRememberedUserId();
     }
 
     // Backend validation check
-    const validationPromise = validateUserId(userIdInput.trim());
+    const validationPromise = validateUserId(cleanNumbers);
 
     // 4.0 seconds scanning radar animation
     timerRef.current = setTimeout(async () => {
