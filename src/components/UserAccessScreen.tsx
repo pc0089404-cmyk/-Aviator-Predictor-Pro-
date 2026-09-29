@@ -469,7 +469,7 @@ export const UserAccessScreen: React.FC<Props> = ({ onAccessGranted }) => {
                       Enter Your User ID
                     </h2>
                     <p className="text-xs text-neutral-400">
-                      Numbers only (e.g. 9130619144 or 4827193056)
+                      Numbers only (e.g. 0812398471 or 4827193056)
                     </p>
                   </div>
 
